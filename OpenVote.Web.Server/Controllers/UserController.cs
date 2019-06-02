@@ -1,27 +1,24 @@
-﻿using OpenVote.Web.Shared;
-using Microsoft.AspNetCore.Mvc;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using OpenVote.Web.Server.Database;
 using OpenVote.Web.Server.Models;
 
 namespace OpenVote.Web.Server.Controllers
 {
     [Route("api/[controller]")]
-    public class SampleDataController : Microsoft.AspNetCore.Mvc.Controller
+    public class UserController : Controller
     {
-        private static string[] Summaries = new[]
+        public IActionResult Index()
         {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        };
+            return View();
+        }
 
-        [HttpGet("[action]")]
-        public IEnumerable<WeatherForecast> WeatherForecasts()
+        [HttpGet("[action]/{id}")]
+        public bool RegisterUser()
         {
-            var rng = new Random();
-
             var remoteIpAddress = Request.HttpContext.Connection.RemoteIpAddress;
             var remotePort = Request.HttpContext.Connection.RemotePort;
             Console.WriteLine($"remoteIpAddress = {remoteIpAddress}");
@@ -43,13 +40,15 @@ namespace OpenVote.Web.Server.Controllers
                     Console.WriteLine($"{u.Id}.{u.Name} - {u.Age}");
                 }
 
-                UserInfo user11 = new UserInfo {
+                UserInfo user11 = new UserInfo
+                {
                     RandomId = 1,
                     IpAddress = "asdaasfas",
                     Port = 2234,
                     PublicKey = new byte[] { }
                 };
-                UserInfo user12 = new UserInfo {
+                UserInfo user12 = new UserInfo
+                {
                     RandomId = 2,
                     IpAddress = "sfdfdadsdaasd",
                     Port = 2234,
@@ -67,13 +66,13 @@ namespace OpenVote.Web.Server.Controllers
                     Console.WriteLine($"{u.Id}.{u.Name} - {u.Age}");
                 }
             }
+            return false;
+        }
 
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
-            {
-                Date = DateTime.Now.AddDays(index),
-                TemperatureC = rng.Next(-20, 55),
-                Summary = Summaries[rng.Next(Summaries.Length)]
-            });
+        [HttpGet("[action]")]
+        public bool CheckInUser()
+        {
+            return false;
         }
     }
 }
