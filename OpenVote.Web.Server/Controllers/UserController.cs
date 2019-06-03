@@ -2,12 +2,34 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 using OpenVote.Web.Server.Database;
 using OpenVote.Web.Server.Models;
 
 namespace OpenVote.Web.Server.Controllers
 {
+    public static class RequestExtention
+    {
+        public static string GetIpAddress(this HttpRequest request)
+        {
+            var cfConnectionIpAddess = request.Headers["CF-CONNECTING-IP"];
+            if (!StringValues.IsNullOrEmpty(cfConnectionIpAddess))
+                return cfConnectionIpAddess;
+
+            var httpXForwardedForIpAddress = request.Headers["HTTP_X_FORWARDED_FOR"];
+            if (!StringValues.IsNullOrEmpty(httpXForwardedForIpAddress))
+            {
+                var addresses = httpXForwardedForIpAddress.ToArray();
+                if (addresses.Length != 0)
+                    return addresses[0];
+            }
+
+            return request.HttpContext.Connection.RemoteIpAddress.ToString();
+        }
+    }
+
     [Route("api/[controller]")]
     public class UserController : Controller
     {
@@ -16,54 +38,53 @@ namespace OpenVote.Web.Server.Controllers
             return View();
         }
 
-        [HttpGet("[action]/{id}")]
-        public bool RegisterUser()
+        [HttpGet("[action]/{publicKey}")]
+        public async Task<bool> RegisterUserAsync(byte[] publicKey)
         {
-            var remoteIpAddress = Request.HttpContext.Connection.RemoteIpAddress;
+            var remoteIpAddress = Request.GetIpAddress();
             var remotePort = Request.HttpContext.Connection.RemotePort;
             Console.WriteLine($"remoteIpAddress = {remoteIpAddress}");
             Console.WriteLine($"remotePort = {remotePort}");
 
-            using (ApplicationContext db = new ApplicationContext())
+            using (DBContext db = new DBContext())
             {
-                User user1 = new User { Name = "Tom", Age = 33 };
-                User user2 = new User { Name = "Alice", Age = 26 };
-
-                db.Users.Add(user1);
-                db.Users.Add(user2);
-                db.SaveChanges();
+                using (var transaction = db.Database.BeginTransaction())
+                {
+                    User user = new User()
+                    {
+                        PublicKey = publicKey
+                    };
+                    UserConnection userConnection = new UserConnection()
+                    {
+                        PublicKey = publicKey,
+                        IpAddress = remoteIpAddress,
+                        Port = remotePort,
+                    };
+                    bool isUserFound = db.Users.Any(u => u.PublicKey == publicKey);
+                    if (!isUserFound)
+                    {
+                        await db.Users.AddAsync(user);
+                        await db.UserConnections.AddAsync(userConnection);
+                    }
+                    else
+                    {
+                        db.UserConnections.Update(userConnection);
+                    }
+                    _ = await db.SaveChangesAsync();
+                }
 
                 var users = db.Users.ToList();
                 Console.WriteLine("Users list:");
                 foreach (User u in users)
                 {
-                    Console.WriteLine($"{u.Id}.{u.Name} - {u.Age}");
+                    Console.WriteLine($"PublicKey = {u.PublicKey}, Name = {u.Name}, Age = {u.Age}");
                 }
 
-                UserInfo user11 = new UserInfo
-                {
-                    RandomId = 1,
-                    IpAddress = "asdaasfas",
-                    Port = 2234,
-                    PublicKey = new byte[] { }
-                };
-                UserInfo user12 = new UserInfo
-                {
-                    RandomId = 2,
-                    IpAddress = "sfdfdadsdaasd",
-                    Port = 2234,
-                    PublicKey = new byte[] { }
-                };
-
-                db.UsersInfo.Add(user11);
-                db.UsersInfo.Add(user12);
-                db.SaveChanges();
-
-                var usersInfo = db.UsersInfo.ToList();
+                var usersInfo = db.UserConnections.ToList();
                 Console.WriteLine("Users list:");
-                foreach (User u in users)
+                foreach (UserConnection u in usersInfo)
                 {
-                    Console.WriteLine($"{u.Id}.{u.Name} - {u.Age}");
+                    Console.WriteLine($"PublicKey = {u.PublicKey}, Address = {u.IpAddress}:{u.Port}");
                 }
             }
             return false;

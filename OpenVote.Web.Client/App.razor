@@ -1,1 +1,37 @@
-﻿<Router AppAssembly="typeof(Program).Assembly" />
+﻿@using Microsoft.Extensions.Logging
+@using System.Security.Cryptography
+
+@inject HttpClient Http
+@inject ILogger<App> Logger
+
+<Router AppAssembly="typeof(Program).Assembly" />
+
+@functions {
+    protected override async Task OnInitAsync()
+    {
+        var generateRSAKeyTask = Task.Run(() => {
+            // Generate a public/private key using RSA
+            RSACryptoServiceProvider RSA = new RSACryptoServiceProvider();
+            // Read public key in a string
+            RSAParameters RSAKeyInfo = new RSAParameters();
+            try
+            {
+                RSAKeyInfo = RSA.ExportParameters(true);
+                //Logger.LogDebug($"Modulus: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.Modulus)}");
+                //Logger.LogDebug($"Exponent: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.Exponent)}");
+                //Logger.LogDebug($"P: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.P)}");
+                //Logger.LogDebug($"Q: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.Q)}");
+                //Logger.LogDebug($"DP: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.DP)}");
+                //Logger.LogDebug($"DQ: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.DQ)}");
+            } catch (Exception ex)
+            {
+                Logger.LogError($"ex is {ex}");
+            }
+            return RSAKeyInfo;
+        });
+
+        RSAParameters resRSAKeyInfo = await generateRSAKeyTask;
+        bool result = await Http.GetJsonAsync<bool>($"api/User/RegisterUser/{System.Text.Encoding.UTF8.GetString(resRSAKeyInfo.P)}");
+        Logger.LogDebug($"result = {result}");
+    }
+}

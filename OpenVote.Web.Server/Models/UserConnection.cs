@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 
 namespace OpenVote.Web.Server.Models
 {
-    public class UserInfo
+    public class UserConnection
     {
-        public int RandomId { get; set; }
+        public byte[] PublicKey { get; set; }
+
         public string IpAddress { get; set; }
         public int Port { get; set; }
-        public byte[] PublicKey { get; set; }
     }
 }

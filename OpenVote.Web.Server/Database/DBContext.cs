@@ -8,10 +8,10 @@ using System.Threading.Tasks;
 
 namespace OpenVote.Web.Server.Database
 {
-    public class ApplicationContext : DbContext
+    public class DBContext : DbContext
     {
         public DbSet<User> Users { get; set; }
-        public DbSet<UserInfo> UsersInfo { get; set; }
+        public DbSet<UserConnection> UserConnections { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -20,8 +20,8 @@ namespace OpenVote.Web.Server.Database
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<UserInfo>()
-                .HasKey(c => new { c.RandomId, c.IpAddress, c.Port, c.PublicKey });
+            modelBuilder.Entity<User>().HasKey(c => new { c.PublicKey });
+            modelBuilder.Entity<UserConnection>().HasKey(c => new { c.PublicKey });
         }
     }
 }
