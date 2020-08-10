@@ -1,37 +1,42 @@
 ﻿@using Microsoft.Extensions.Logging
 @using System.Security.Cryptography
+@using System.Text;
+@using OpenVote.Web.Client.Shared
+@using BlazorWorker.BackgroundServiceFactory
+@using BlazorWorker.Core
+@using OpenVote.Web.Client.Services
 
 @inject HttpClient Http
 @inject ILogger<App> Logger
+@inject IWorkerFactory WorkerFactory
 
-<Router AppAssembly="typeof(Program).Assembly" />
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p>Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>
 
-@functions {
-    protected override async Task OnInitAsync()
+@code {
+    protected override async Task OnInitializedAsync()
     {
-        var generateRSAKeyTask = Task.Run(() => {
-            // Generate a public/private key using RSA
-            RSACryptoServiceProvider RSA = new RSACryptoServiceProvider();
-            // Read public key in a string
-            RSAParameters RSAKeyInfo = new RSAParameters();
-            try
-            {
-                RSAKeyInfo = RSA.ExportParameters(true);
-                //Logger.LogDebug($"Modulus: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.Modulus)}");
-                //Logger.LogDebug($"Exponent: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.Exponent)}");
-                //Logger.LogDebug($"P: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.P)}");
-                //Logger.LogDebug($"Q: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.Q)}");
-                //Logger.LogDebug($"DP: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.DP)}");
-                //Logger.LogDebug($"DQ: {System.Text.Encoding.UTF8.GetString(RSAKeyInfo.DQ)}");
-            } catch (Exception ex)
-            {
-                Logger.LogError($"ex is {ex}");
-            }
-            return RSAKeyInfo;
-        });
-
-        RSAParameters resRSAKeyInfo = await generateRSAKeyTask;
-        bool result = await Http.GetJsonAsync<bool>($"api/User/RegisterUser/{System.Text.Encoding.UTF8.GetString(resRSAKeyInfo.P)}");
-        Logger.LogDebug($"result = {result}");
+        // Create worker.
+        var worker = await WorkerFactory.CreateAsync();
+        
+        // Create service reference. For most scenarios, it's safe (and best) to keep this 
+        // reference around somewhere to avoid the startup cost.
+        var service = await worker.CreateBackgroundServiceAsync<CryptoService>();
+        
+        // Reference that live outside of the current scope should not be passed into the expression.
+        // To circumvent this, create a scope-local variable like this, and pass the local variable.
+        service.RunAsync(s => s.GenerateKey(2048));
+        
+        // RSAParameters? resRSAKeyInfo = await generateRSAKeyTask;
+        //bool result = await Http.GetJsonAsync<bool>($"api/User/RegisterUser/{System.Text.Encoding.UTF8.GetString(resRSAKeyInfo.Exponent)}");
+        //Logger.LogDebug($"result = {result}");
     }
 }

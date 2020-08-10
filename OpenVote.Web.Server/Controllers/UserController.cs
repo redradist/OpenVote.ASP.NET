@@ -1,35 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Primitives;
 using OpenVote.Web.Server.Database;
 using OpenVote.Web.Server.Models;
+using OpenVote.Web.Server.Utils;
 
 namespace OpenVote.Web.Server.Controllers
 {
-    public static class RequestExtention
-    {
-        public static string GetIpAddress(this HttpRequest request)
-        {
-            var cfConnectionIpAddess = request.Headers["CF-CONNECTING-IP"];
-            if (!StringValues.IsNullOrEmpty(cfConnectionIpAddess))
-                return cfConnectionIpAddess;
-
-            var httpXForwardedForIpAddress = request.Headers["HTTP_X_FORWARDED_FOR"];
-            if (!StringValues.IsNullOrEmpty(httpXForwardedForIpAddress))
-            {
-                var addresses = httpXForwardedForIpAddress.ToArray();
-                if (addresses.Length != 0)
-                    return addresses[0];
-            }
-
-            return request.HttpContext.Connection.RemoteIpAddress.ToString();
-        }
-    }
-
     [Route("api/[controller]")]
     public class UserController : Controller
     {
